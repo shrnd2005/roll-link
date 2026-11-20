@@ -99,7 +99,7 @@ const CAT = { offense:"Offense", control:"Control", support:"Support", tank:"Tan
 
 let room = (new URLSearchParams(location.hash.slice(1)).get("room") || store.get("room", "") || "").trim().toLowerCase();
 let me = store.get("pc:" + room, null);
-let roster = [], S = null, conn = null, peer = null, retry = null, fpView = "fight";
+let roster = [], S = null, conn = null, peer = null, retry = null, fpView = "fight", tries = 0;
 let queue = store.get("queue:" + room, []);      // rolls not yet confirmed by the DM
 let mine = store.get("mine:" + room, []);        // this device's recent rolls, newest first
 
@@ -122,7 +122,8 @@ function connect(){
     peer.on("open", () => openConn());
     peer.on("disconnected", () => { try{ peer.reconnect(); }catch(e){} });
     peer.on("error", e => {
-      if(e.type === "peer-unavailable") pill("warn", "Waiting for the DM's tracker…");
+      tries++;
+      if(e.type === "peer-unavailable") pill("warn", "Waiting for the DM's tracker… (try " + tries + ")");
       else pill("warn", "Reconnecting…");
       retry = setTimeout(connect, 4000);
     });
@@ -132,8 +133,12 @@ function openConn(){
   try{ if(conn) conn.close(); }catch(e){}
   pill("warn", "Connecting…");
   conn = peer.connect("ewm-" + room, { reliable:true });
+  const mine = conn;
+  setTimeout(() => {                 // found the DM but the link never opened: the network is blocking it
+    if(conn === mine && !mine.open) pill("warn", "Found the DM, but this network is blocking the link — try mobile data");
+  }, 15000);
   conn.on("open", () => {
-    pill("ok", "Connected");
+    tries = 0; pill("ok", "Connected");
     if(me) send({ t:"hello", pc:me });
     flush();
   });
