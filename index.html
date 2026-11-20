@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 :root, :root[data-theme="day"]{
   --bg:#f3f6f9; --panel:#ffffff; --panel2:#eaf0f5; --line:#d6dee6; --line2:#c3cdd7;
@@ -97,11 +96,16 @@ const store = {
 const CATS = ["offense","control","support","tank","clutch"];
 const CAT = { offense:"Offense", control:"Control", support:"Support", tank:"Tank", clutch:"Clutch" };
 
-let room = (new URLSearchParams(location.hash.slice(1)).get("room") || store.get("room", "") || "").trim().toLowerCase();
+const hashParams = () => new URLSearchParams(location.hash.slice(1));
+let room = (hashParams().get("room") || store.get("room", "") || "").trim().toLowerCase();
+let db = (hashParams().get("db") || store.get("db", "") || "").trim().toLowerCase();
 let me = store.get("pc:" + room, null);
-let roster = [], S = null, conn = null, peer = null, retry = null, fpView = "fight", tries = 0;
-let queue = store.get("queue:" + room, []);      // rolls not yet confirmed by the DM
-let mine = store.get("mine:" + room, []);        // this device's recent rolls, newest first
+let roster = [], S = null, es = null, retry = null, fpView = "fight", dmBeat = 0, live = false;
+let queue = store.get("queue:" + room, []);      // taps not yet delivered to the relay
+let mine = store.get("mine:" + room, []);        // this device's recent taps, newest first
+const tree = {};
+const okDb = d => /^[a-z0-9.-]+\.(firebaseio\.com|firebasedatabase\.app)$/.test(d || "") || /^localhost:\d+$/.test(d || "");   // localhost: testing only
+const base = () => (/^localhost:/.test(db) ? "http://" : "https://") + db + "/rooms/" + encodeURIComponent(room);
 
 /* theme: follows the phone, can be flipped */
 let theme = store.get("theme", matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "day");
@@ -112,96 +116,121 @@ applyTheme();
 function toast(t){ const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 1600); }
 function pill(state, text){ $("#pill").innerHTML = '<span class="dot ' + state + '"></span>' + esc(text); }
 
-/* ── connection ── */
+/* ── connection: a Firebase Realtime Database over ordinary HTTPS ── */
+function applyPath(root, path, data){
+  const segs = String(path || "/").split("/").filter(Boolean);
+  if(!segs.length){ Object.keys(root).forEach(k => delete root[k]); if(data && typeof data === "object") Object.assign(root, data); return; }
+  let o = root;
+  for(let i = 0; i < segs.length - 1; i++){ if(!o[segs[i]] || typeof o[segs[i]] !== "object") o[segs[i]] = {}; o = o[segs[i]]; }
+  const k = segs[segs.length - 1];
+  if(data === null) delete o[k]; else o[k] = data;
+}
+async function put(path, body){
+  try{ const r = await fetch(base() + path + ".json", { method:"PUT", body:JSON.stringify(body) }); return r.ok; }
+  catch(e){ return false; }
+}
 function connect(){
   clearTimeout(retry);
-  if(!room) return;
-  if(!window.Peer){ pill("", "Couldn't load — check your internet"); return; }
-  if(!peer || peer.destroyed){
-    peer = new Peer();
-    peer.on("open", () => openConn());
-    peer.on("disconnected", () => { try{ peer.reconnect(); }catch(e){} });
-    peer.on("error", e => {
-      tries++;
-      if(e.type === "peer-unavailable") pill("warn", "Waiting for the DM's tracker… (try " + tries + ")");
-      else pill("warn", "Reconnecting…");
-      retry = setTimeout(connect, 4000);
-    });
-  }else if(peer.open) openConn();
-}
-function openConn(){
-  try{ if(conn) conn.close(); }catch(e){}
+  if(es){ es.close(); es = null; }
+  if(!room || !okDb(db)){ render(); return; }
   pill("warn", "Connecting…");
-  conn = peer.connect("ewm-" + room, { reliable:true });
-  const mine = conn;
-  setTimeout(() => {                 // found the DM but the link never opened: the network is blocking it
-    if(conn === mine && !mine.open) pill("warn", "Found the DM, but this network is blocking the link — try mobile data");
-  }, 15000);
-  conn.on("open", () => {
-    tries = 0; pill("ok", "Connected");
-    if(me) send({ t:"hello", pc:me });
-    flush();
-  });
-  conn.on("data", onData);
-  conn.on("close", () => { pill("warn", "Lost the DM — retrying"); retry = setTimeout(connect, 3000); });
-  conn.on("error", () => { retry = setTimeout(connect, 4000); });
+  const src = new EventSource(base() + "/out.json");
+  es = src;
+  const onMsg = patch => ev => {
+    let m; try{ m = JSON.parse(ev.data); }catch(e){ return; }
+    if(!m) return;
+    if(patch) Object.entries(m.data || {}).forEach(([k, v]) => applyPath(tree, (m.path === "/" ? "" : m.path) + "/" + k, v));
+    else applyPath(tree, m.path, m.data);
+    S = tree.state || null;
+    roster = (S && S.roster) || roster;
+    dmBeat = +tree.beat || 0;
+    if(me && roster.length && !roster.some(p => p.id === me)) me = null;
+    status(); render();
+  };
+  src.addEventListener("put", onMsg(false));
+  src.addEventListener("patch", onMsg(true));
+  src.onopen = () => { if(es !== src) return; live = true; status(); flush(); beat(); };
+  src.onerror = () => {
+    if(es !== src) return;
+    live = false; status();
+    if(src.readyState === EventSource.CLOSED) retry = setTimeout(connect, 5000);
+  };
 }
-function send(m){ try{ if(conn && conn.open){ conn.send(m); return true; } }catch(e){} return false; }
-function flush(){ queue.forEach(m => send(m)); }
-function onData(m){
-  if(!m || typeof m !== "object") return;
-  if(m.t === "hi"){ roster = m.roster || []; if(me && !roster.some(p => p.id === me)) me = null; render(); }
-  else if(m.t === "state"){ S = m; roster = m.roster || roster; render(); }
-  else if(m.t === "ack"){
-    queue = queue.filter(q => q.id !== m.id); store.set("queue:" + room, queue);
-    const r = mine.find(x => x.id === m.id); if(r){ r.ok = !m.undone; if(m.undone) mine = mine.filter(x => x !== r); store.set("mine:" + room, mine); }
-    render();
+function status(){
+  if(!live) return pill("warn", "Reconnecting…");
+  if(!S) return pill("warn", "Waiting for the DM's tracker…");
+  if(Date.now() - dmBeat > 90000) return pill("warn", "The DM's tracker is closed");
+  pill("ok", "Connected");
+}
+function beat(){ if(me && live) put("/in/players/" + me, { t:Date.now() }); }
+setInterval(status, 15000);
+setInterval(beat, 25000);
+let flushing = false;
+async function flush(){
+  if(flushing) return;
+  flushing = true;
+  while(queue.length){                 // taps made while sending join the end and go out too
+    const m = queue[0];
+    const ok = await put("/in/rolls/" + m.id, { v:m.v, pc:m.pc, t:m.t });
+    if(!ok) break;
+    queue = queue.filter(q => q.id !== m.id);
+    const r = mine.find(x => x.id === m.id); if(r) r.ok = true;
   }
+  flushing = false;
+  store.set("queue:" + room, queue); store.set("mine:" + room, mine);
+  render();
 }
 
 /* ── actions ── */
 function roll(v){
-  const m = { t:"roll", id:uid(), v, pc:me };
+  const m = { id:uid(), v, pc:me, t:Date.now() };
   queue.push(m); store.set("queue:" + room, queue);
-  mine.unshift({ id:m.id, v, ok:false, t:Date.now() }); mine = mine.slice(0, 20); store.set("mine:" + room, mine);
-  send(m);
+  mine.unshift({ id:m.id, v, ok:false, t:m.t }); mine = mine.slice(0, 20); store.set("mine:" + room, mine);
   if(navigator.vibrate) navigator.vibrate(v === 20 ? [40, 40, 80] : 25);
   toast(v === 20 ? "Natural 20!" : v === 1 ? "Natural 1…" : "Logged " + v);
   render();
+  flush();
 }
 function undoLast(){
   const r = mine[0]; if(!r) return;
   if(!confirm("Take back your " + r.v + "?")) return;
-  const pending = queue.find(q => q.id === r.id);
-  if(pending){ queue = queue.filter(q => q !== pending); store.set("queue:" + room, queue); mine.shift(); store.set("mine:" + room, mine); render(); return; }
-  const m = { t:"undo", id:r.id }; send(m);
-  mine.shift(); store.set("mine:" + room, mine); render();
+  if(queue.some(q => q.id === r.id)) queue = queue.filter(q => q.id !== r.id);
+  else put("/in/undo/" + r.id, true);
+  mine.shift(); store.set("queue:" + room, queue); store.set("mine:" + room, mine); render();
 }
-function choose(id){ me = id; store.set("pc:" + room, id); send({ t:"hello", pc:id }); render(); }
-function setRoom(){
-  const v = ($("#roomIn").value || "").trim().toLowerCase().replace(/^.*room=/, "");
-  if(!v) return;
-  room = v; store.set("room", v); location.hash = "room=" + v;
+function choose(id){ me = id; store.set("pc:" + room, id); beat(); render(); }
+function useLink(text){
+  const t = String(text || "");
+  const r = (t.match(/room=([a-z0-9]+)/i) || [])[1], d = (t.match(/db=([a-z0-9.:-]+)/i) || [])[1];
+  if(!r || !d || !okDb(d.toLowerCase())) return false;
+  room = r.toLowerCase(); db = d.toLowerCase();
+  store.set("room", room); store.set("db", db);
   me = store.get("pc:" + room, null); queue = store.get("queue:" + room, []); mine = store.get("mine:" + room, []);
+  S = null; roster = []; Object.keys(tree).forEach(k => delete tree[k]);
   connect(); render();
+  return true;
+}
+function setRoom(){
+  if(!useLink($("#roomIn").value)) toast("Paste the whole link your DM sent");
+  else history.replaceState(null, "", location.pathname + "#room=" + room + "&db=" + db);
 }
 
 /* ── screen ── */
 function render(){
   const app = $("#app");
-  if(!room){
-    app.innerHTML = '<div class="panel"><h2>Join the table</h2><p class="muted" style="margin-top:0">Type the room code your DM gave you.</p>' +
-      '<input id="roomIn" placeholder="Room code" autocapitalize="off" autocomplete="off" spellcheck="false"><p><button class="pri" id="joinBtn" style="width:100%">Join</button></p></div>';
+  if(!room || !okDb(db)){
+    app.innerHTML = '<div class="panel"><h2>Join the table</h2><p class="muted" style="margin-top:0">Open the link your DM sent, or paste it here.</p>' +
+      '<input id="roomIn" placeholder="Paste the link" autocapitalize="off" autocomplete="off" spellcheck="false"><p><button class="pri" id="joinBtn" style="width:100%">Join</button></p></div>';
     $("#joinBtn").onclick = setRoom; $("#roomIn").onkeydown = e => { if(e.key === "Enter") setRoom(); };
     return;
   }
   if(!me){
     app.innerHTML = '<div class="panel"><h2>Who are you playing?</h2>' + (roster.length
       ? '<div class="pick">' + roster.map(p => '<button data-pc="' + esc(p.id) + '">' + esc(p.name) + "</button>").join("") + "</div>"
-      : '<p class="muted">Waiting for the DM\'s tracker to answer… It has to be open on their computer.</p>') +
-      '<p><button class="ghost" id="chgRoom">Use a different room code</button></p></div>';
+      : '<p class="muted">Waiting for the DM\'s tracker… It has to be open on their computer.</p>') +
+      '<p><button class="ghost" id="chgRoom">Use a different link</button></p></div>';
     app.querySelectorAll("[data-pc]").forEach(b => b.onclick = () => choose(b.dataset.pc));
-    $("#chgRoom").onclick = () => { room = ""; store.set("room", ""); history.replaceState(null, "", location.pathname); render(); };
+    $("#chgRoom").onclick = () => { if(es) es.close(); room = ""; store.set("room", ""); history.replaceState(null, "", location.pathname); render(); };
     return;
   }
   const meP = roster.find(p => p.id === me) || { short:"You" };
@@ -219,7 +248,7 @@ function render(){
     '<div class="panel"><h2>' + esc(meP.short) + "'s d20<span class=\"rt\">tap what the die shows</span></h2>" +
     '<div class="grid">' + Array.from({ length:20 }, (_, i) => i + 1).map(n =>
       '<button data-v="' + n + '" class="' + (n === 20 ? "n20" : n === 1 ? "n1" : "") + '">' + n + "</button>").join("") + "</div>" +
-    '<div class="under"><span class="last">' + (last ? "Last: <b>" + last.v + "</b> " + (last.ok ? "✓ logged" : "· sending…") : "Nothing rolled yet") +
+    '<div class="under"><span class="last">' + (last ? "Last: <b>" + last.v + "</b> " + (last.ok ? "✓ sent" : "· sending…") : "Nothing rolled yet") +
       (queue.length > 1 ? " · " + queue.length + " waiting" : "") + "</span>" +
       (last ? '<button id="undoBtn">Undo</button>' : "") + "</div>" +
     (st ? '<div class="mine"><div><b>' + st.d20 + "</b><span>d20s</span></div><div><b>" + st.n20 + "</b><span>nat 20s</span></div><div><b>" + st.n1 +
@@ -261,12 +290,10 @@ function render(){
   const u = $("#undoBtn"); if(u) u.onclick = undoLast;
   $("#notMe").onclick = () => { me = null; store.set("pc:" + room, null); render(); };
 }
-window.addEventListener("hashchange", () => {
-  const r = (new URLSearchParams(location.hash.slice(1)).get("room") || "").trim().toLowerCase();
-  if(r && r !== room){ room = r; store.set("room", r); me = store.get("pc:" + room, null); queue = store.get("queue:" + room, []); mine = store.get("mine:" + room, []); connect(); render(); }
-});
-document.addEventListener("visibilitychange", () => { if(!document.hidden && (!conn || !conn.open)) connect(); });
+window.addEventListener("hashchange", () => { const h = location.hash; if(/room=/.test(h) && /db=/.test(h)) useLink(h); });
+document.addEventListener("visibilitychange", () => { if(!document.hidden && !live) connect(); });
 if(room) store.set("room", room);
+if(okDb(db)) store.set("db", db);
 render();
 connect();
 </script>
