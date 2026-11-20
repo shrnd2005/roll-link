@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1018">
+<title>Roll Link</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root, :root[data-theme="day"]{
+  --bg:#f3f6f9; --panel:#ffffff; --panel2:#eaf0f5; --line:#d6dee6; --line2:#c3cdd7;
+  --text:#1f2c38; --dim:#5f6f7e; --faint:#8a98a5; --accent:#2b7a8a; --onaccent:#fff; --wash:rgba(43,122,138,.12);
+  --pc:#3d6f9e; --enemy:#b4483a; --lair:#7a5cb0; --ok:#3c8a5e; --warn:#a5803a; --bad:#b4483a;
+  --c-offense:#2b7a8a; --c-control:#7a5cb0; --c-support:#3c8a5e; --c-tank:#a5803a; --c-clutch:#b0567a;
+}
+:root[data-theme="night"]{
+  --bg:#0b1018; --panel:#131b26; --panel2:#1a2432; --line:#243142; --line2:#33445a;
+  --text:#dfe7ef; --dim:#8593a3; --faint:#5f6d7e; --accent:#5fd4b0; --onaccent:#0b1018; --wash:rgba(95,212,176,.14);
+  --pc:#a58ae0; --enemy:#e0707a; --lair:#6fb4e8; --ok:#5fd4b0; --warn:#e3c27a; --bad:#e0707a;
+  --c-offense:#5fd4b0; --c-control:#a58ae0; --c-support:#6fb4e8; --c-tank:#e3c27a; --c-clutch:#f0a0c0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font-family:'Crimson Pro',Georgia,serif;font-size:17px;line-height:1.35;padding:max(12px,env(safe-area-inset-top)) 14px 40px;max-width:560px;margin:0 auto;-webkit-tap-highlight-color:transparent}
+h1,h2,.cz{font-family:'Cinzel',Georgia,serif;font-weight:700;letter-spacing:.06em}
+button,input{font:inherit;color:inherit}
+button{background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:8px 12px;cursor:pointer;touch-action:manipulation}
+button.pri{background:var(--accent);border-color:var(--accent);color:var(--onaccent);font-weight:600}
+input{background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;width:100%}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.top h1{font-size:18px;margin:0;color:var(--accent)}
+.top .sp{flex:1}
+.pill{font-size:14px;color:var(--dim);display:flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--faint)} .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)}
+.ghost{background:transparent;border-color:transparent;color:var(--dim);padding:6px 8px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.panel h2{font-size:13px;color:var(--accent);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.panel h2 .rt{margin-left:auto;font-family:'Crimson Pro',serif;letter-spacing:0;font-weight:400;font-size:14px;color:var(--dim)}
+.muted{color:var(--dim)}
+.pick{display:grid;gap:8px}
+.pick button{font-size:20px;padding:14px;text-align:left}
+.banner{border-radius:14px;padding:12px 14px;margin-bottom:12px;font-family:'Cinzel',serif;font-weight:700;letter-spacing:.06em;text-align:center;font-size:17px}
+.banner.up{background:var(--accent);color:var(--onaccent)}
+.banner.next{background:var(--wash);color:var(--accent);border:1px solid var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.grid button{font-size:22px;font-weight:600;padding:14px 0;font-variant-numeric:tabular-nums;border-radius:12px}
+.grid button.n20{border:2px solid var(--ok);color:var(--ok)} .grid button.n1{border:2px solid var(--bad);color:var(--bad)}
+.grid button:active{transform:scale(.95);background:var(--wash)}
+.under{display:flex;align-items:center;gap:10px;margin-top:10px}
+.under .last{flex:1;color:var(--dim);font-size:15px}
+.mine{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px;text-align:center}
+.mine div{background:var(--panel2);border-radius:10px;padding:6px 2px}
+.mine b{display:block;font-size:20px;font-variant-numeric:tabular-nums} .mine span{font-size:13px;color:var(--dim)}
+.order .r{display:flex;align-items:center;gap:10px;padding:7px 10px;border-left:4px solid var(--line2);background:var(--panel2);border-radius:0 9px 9px 0;margin-bottom:4px}
+.order .r.pc{border-left-color:var(--pc)} .order .r.enemy{border-left-color:var(--enemy)} .order .r.lair{border-left-color:var(--lair)}
+.order .r.on{background:var(--wash);border-left-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.order .r.me .n{text-decoration:underline;text-underline-offset:3px}
+.order .i{font-family:'Cinzel',serif;font-weight:700;color:var(--accent);min-width:26px;text-align:right}
+.order .n{flex:1} .order .pc .n{color:var(--pc);font-weight:600}
+.order .c{font-size:13px;color:var(--dim);font-style:italic}
+.tag{font-size:12px;border:1px solid var(--bad);color:var(--bad);border-radius:999px;padding:0 7px}
+.lb .row{display:grid;grid-template-columns:minmax(0,1fr) 54px;gap:10px;align-items:center;margin-bottom:8px}
+.lb .nm{display:flex;justify-content:space-between;gap:6px}
+.lb .nm .role{font-size:13px;color:var(--dim)}
+.lb .t{font-family:'Cinzel',serif;font-weight:700;font-size:18px;text-align:right;color:var(--accent)}
+.bar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--panel2);margin-top:3px}
+.bar i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--dim);margin-bottom:8px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px}
+.seg{display:flex;gap:4px;margin-bottom:8px}
+.seg button{padding:3px 12px;font-size:14px;border-radius:999px}
+.seg button.on{background:var(--wash);border-color:var(--accent);color:var(--accent);font-weight:600}
+.recent div{display:flex;gap:8px;font-size:15px;padding:3px 0;border-bottom:1px solid var(--line)}
+.recent .p{font-weight:600;color:var(--pc);min-width:58px} .recent .x{flex:1}
+.recent .v{font-variant-numeric:tabular-nums} .recent .v.neg{color:var(--bad)} .recent .v.pos{color:var(--ok)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 18px;border-radius:12px;font-size:17px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="top"><h1>Roll Link</h1><span class="sp"></span><span class="pill" id="pill"><span class="dot"></span>Not connected</span>
+  <button class="ghost" id="themeBtn" aria-label="Day or night">☾</button></div>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("rolllink:" + k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("rolllink:" + k, JSON.stringify(v)); }catch(e){} }
+};
+const CATS = ["offense","control","support","tank","clutch"];
+const CAT = { offense:"Offense", control:"Control", support:"Support", tank:"Tank", clutch:"Clutch" };
+
+let room = (new URLSearchParams(location.hash.slice(1)).get("room") || store.get("room", "") || "").trim().toLowerCase();
+let me = store.get("pc:" + room, null);
+let roster = [], S = null, conn = null, peer = null, retry = null, fpView = "fight";
+let queue = store.get("queue:" + room, []);      // rolls not yet confirmed by the DM
+let mine = store.get("mine:" + room, []);        // this device's recent rolls, newest first
+
+/* theme: follows the phone, can be flipped */
+let theme = store.get("theme", matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "day");
+function applyTheme(){ document.documentElement.dataset.theme = theme; $("#themeBtn").textContent = theme === "day" ? "☾" : "☀"; }
+$("#themeBtn").onclick = () => { theme = theme === "day" ? "night" : "day"; store.set("theme", theme); applyTheme(); };
+applyTheme();
+
+function toast(t){ const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 1600); }
+function pill(state, text){ $("#pill").innerHTML = '<span class="dot ' + state + '"></span>' + esc(text); }
+
+/* ── connection ── */
+function connect(){
+  clearTimeout(retry);
+  if(!room) return;
+  if(!window.Peer){ pill("", "Couldn't load — check your internet"); return; }
+  if(!peer || peer.destroyed){
+    peer = new Peer();
+    peer.on("open", () => openConn());
+    peer.on("disconnected", () => { try{ peer.reconnect(); }catch(e){} });
+    peer.on("error", e => {
+      if(e.type === "peer-unavailable") pill("warn", "Waiting for the DM's tracker…");
+      else pill("warn", "Reconnecting…");
+      retry = setTimeout(connect, 4000);
+    });
+  }else if(peer.open) openConn();
+}
+function openConn(){
+  try{ if(conn) conn.close(); }catch(e){}
+  pill("warn", "Connecting…");
+  conn = peer.connect("ewm-" + room, { reliable:true });
+  conn.on("open", () => {
+    pill("ok", "Connected");
+    if(me) send({ t:"hello", pc:me });
+    flush();
+  });
+  conn.on("data", onData);
+  conn.on("close", () => { pill("warn", "Lost the DM — retrying"); retry = setTimeout(connect, 3000); });
+  conn.on("error", () => { retry = setTimeout(connect, 4000); });
+}
+function send(m){ try{ if(conn && conn.open){ conn.send(m); return true; } }catch(e){} return false; }
+function flush(){ queue.forEach(m => send(m)); }
+function onData(m){
+  if(!m || typeof m !== "object") return;
+  if(m.t === "hi"){ roster = m.roster || []; if(me && !roster.some(p => p.id === me)) me = null; render(); }
+  else if(m.t === "state"){ S = m; roster = m.roster || roster; render(); }
+  else if(m.t === "ack"){
+    queue = queue.filter(q => q.id !== m.id); store.set("queue:" + room, queue);
+    const r = mine.find(x => x.id === m.id); if(r){ r.ok = !m.undone; if(m.undone) mine = mine.filter(x => x !== r); store.set("mine:" + room, mine); }
+    render();
+  }
+}
+
+/* ── actions ── */
+function roll(v){
+  const m = { t:"roll", id:uid(), v, pc:me };
+  queue.push(m); store.set("queue:" + room, queue);
+  mine.unshift({ id:m.id, v, ok:false, t:Date.now() }); mine = mine.slice(0, 20); store.set("mine:" + room, mine);
+  send(m);
+  if(navigator.vibrate) navigator.vibrate(v === 20 ? [40, 40, 80] : 25);
+  toast(v === 20 ? "Natural 20!" : v === 1 ? "Natural 1…" : "Logged " + v);
+  render();
+}
+function undoLast(){
+  const r = mine[0]; if(!r) return;
+  if(!confirm("Take back your " + r.v + "?")) return;
+  const pending = queue.find(q => q.id === r.id);
+  if(pending){ queue = queue.filter(q => q !== pending); store.set("queue:" + room, queue); mine.shift(); store.set("mine:" + room, mine); render(); return; }
+  const m = { t:"undo", id:r.id }; send(m);
+  mine.shift(); store.set("mine:" + room, mine); render();
+}
+function choose(id){ me = id; store.set("pc:" + room, id); send({ t:"hello", pc:id }); render(); }
+function setRoom(){
+  const v = ($("#roomIn").value || "").trim().toLowerCase().replace(/^.*room=/, "");
+  if(!v) return;
+  room = v; store.set("room", v); location.hash = "room=" + v;
+  me = store.get("pc:" + room, null); queue = store.get("queue:" + room, []); mine = store.get("mine:" + room, []);
+  connect(); render();
+}
+
+/* ── screen ── */
+function render(){
+  const app = $("#app");
+  if(!room){
+    app.innerHTML = '<div class="panel"><h2>Join the table</h2><p class="muted" style="margin-top:0">Type the room code your DM gave you.</p>' +
+      '<input id="roomIn" placeholder="Room code" autocapitalize="off" autocomplete="off" spellcheck="false"><p><button class="pri" id="joinBtn" style="width:100%">Join</button></p></div>';
+    $("#joinBtn").onclick = setRoom; $("#roomIn").onkeydown = e => { if(e.key === "Enter") setRoom(); };
+    return;
+  }
+  if(!me){
+    app.innerHTML = '<div class="panel"><h2>Who are you playing?</h2>' + (roster.length
+      ? '<div class="pick">' + roster.map(p => '<button data-pc="' + esc(p.id) + '">' + esc(p.name) + "</button>").join("") + "</div>"
+      : '<p class="muted">Waiting for the DM\'s tracker to answer… It has to be open on their computer.</p>') +
+      '<p><button class="ghost" id="chgRoom">Use a different room code</button></p></div>';
+    app.querySelectorAll("[data-pc]").forEach(b => b.onclick = () => choose(b.dataset.pc));
+    $("#chgRoom").onclick = () => { room = ""; store.set("room", ""); history.replaceState(null, "", location.pathname); render(); };
+    return;
+  }
+  const meP = roster.find(p => p.id === me) || { short:"You" };
+  const order = (S && S.order) || [];
+  const ai = order.findIndex(r => r.on);
+  const myIdx = order.findIndex(r => r.pc === me);
+  let banner = "";
+  if(S && S.running && ai > -1 && order.length){
+    if(order[ai].pc === me) banner = '<div class="banner up">You\'re up, ' + esc(meP.short) + "</div>";
+    else if(myIdx === (ai + 1) % order.length) banner = '<div class="banner next">You\'re next</div>';
+  }
+  const st = S && S.rolls && S.rolls[me];
+  const last = mine[0];
+  let h = banner +
+    '<div class="panel"><h2>' + esc(meP.short) + "'s d20<span class=\"rt\">tap what the die shows</span></h2>" +
+    '<div class="grid">' + Array.from({ length:20 }, (_, i) => i + 1).map(n =>
+      '<button data-v="' + n + '" class="' + (n === 20 ? "n20" : n === 1 ? "n1" : "") + '">' + n + "</button>").join("") + "</div>" +
+    '<div class="under"><span class="last">' + (last ? "Last: <b>" + last.v + "</b> " + (last.ok ? "✓ logged" : "· sending…") : "Nothing rolled yet") +
+      (queue.length > 1 ? " · " + queue.length + " waiting" : "") + "</span>" +
+      (last ? '<button id="undoBtn">Undo</button>' : "") + "</div>" +
+    (st ? '<div class="mine"><div><b>' + st.d20 + "</b><span>d20s</span></div><div><b>" + st.n20 + "</b><span>nat 20s</span></div><div><b>" + st.n1 +
+      "</b><span>nat 1s</span></div><div><b>" + (st.avg == null ? "—" : st.avg) + "</b><span>average</span></div></div>" : "") + "</div>";
+
+  h += '<div class="panel order"><h2>Turn order<span class="rt">' + (S && S.running ? "Round " + S.round : "no fight running") + "</span></h2>" +
+    (order.length ? order.map((r, i) => '<div class="r ' + r.type + (r.on ? " on" : "") + (r.pc === me ? " me" : "") + '"><span class="i">' + (r.init ?? "—") + '</span><span class="n">' +
+      esc(r.n) + (r.conds && r.conds.length ? ' <span class="c">' + esc(r.conds.join(", ")) + "</span>" : "") + "</span>" +
+      (r.bl ? '<span class="tag">bloodied</span>' : r.down ? '<span class="tag">down</span>' : "") + "</div>").join("")
+      : '<p class="muted" style="margin:0">The order shows up here when the DM starts a fight.</p>') + "</div>";
+
+  if(S && S.showFp && S.fp){
+    const src = fpView === "fight" && S.fp.fight ? S.fp.fight : null;
+    const rows = roster.map(p => {
+      const o = src ? src[p.id] : null, total = src ? (o ? o.total : 0) : (S.fp.act[p.id] || 0);
+      return { p, o, total };
+    }).sort((a, b) => b.total - a.total);
+    h += '<div class="panel lb"><h2>Fantasy points<span class="rt"></span></h2>' +
+      '<div class="seg"><button data-fp="fight" class="' + (fpView === "fight" ? "on" : "") + '">This fight</button><button data-fp="act" class="' +
+        (fpView === "act" ? "on" : "") + '">' + esc(S.act || "This act") + "</button></div>" +
+      (src ? '<div class="legend">' + CATS.map(c => '<span><i style="background:var(--c-' + c + ')"></i>' + CAT[c] + "</span>").join("") + "</div>" : "") +
+      rows.map(({ p, o, total }) => {
+        let bar = "";
+        if(o){ const tot = CATS.reduce((s, c) => s + Math.max(0, o.cats[c]), 0) || 1;
+          bar = '<div class="bar">' + CATS.map(c => o.cats[c] > 0 ? '<i style="width:' + (100 * o.cats[c] / tot) + '%;background:var(--c-' + c + ')"></i>' : "").join("") + "</div>"; }
+        return '<div class="row"><div><div class="nm"><span style="' + (p.id === me ? "font-weight:600" : "") + '">' + esc(p.short || p.name) + "</span>" +
+          (o && o.role && o.role !== "—" ? '<span class="role">' + esc(o.role) + "</span>" : "") + "</div>" + bar + '</div><span class="t">' + total + "</span></div>";
+      }).join("") +
+      (S.recent && S.recent.length ? '<h2 style="margin-top:10px">Latest</h2><div class="recent">' + S.recent.map(r => {
+        const n = roster.find(p => p.id === r.pc);
+        return '<div><span class="p">' + esc(n ? n.short || n.name : "") + '</span><span class="x">' + esc(r.text) + '</span><span class="v ' + (r.pts < 0 ? "neg" : r.pts > 0 ? "pos" : "") + '">' +
+          (r.pts > 0 ? "+" : "") + r.pts + "</span></div>";
+      }).join("") + "</div>" : "") + "</div>";
+  }
+  h += '<p style="text-align:center"><button class="ghost" id="notMe">Not ' + esc(meP.short) + "? Switch character</button></p>";
+  app.innerHTML = h;
+  app.querySelectorAll("[data-v]").forEach(b => b.onclick = () => roll(+b.dataset.v));
+  app.querySelectorAll("[data-fp]").forEach(b => b.onclick = () => { fpView = b.dataset.fp; render(); });
+  const u = $("#undoBtn"); if(u) u.onclick = undoLast;
+  $("#notMe").onclick = () => { me = null; store.set("pc:" + room, null); render(); };
+}
+window.addEventListener("hashchange", () => {
+  const r = (new URLSearchParams(location.hash.slice(1)).get("room") || "").trim().toLowerCase();
+  if(r && r !== room){ room = r; store.set("room", r); me = store.get("pc:" + room, null); queue = store.get("queue:" + room, []); mine = store.get("mine:" + room, []); connect(); render(); }
+});
+document.addEventListener("visibilitychange", () => { if(!document.hidden && (!conn || !conn.open)) connect(); });
+if(room) store.set("room", room);
+render();
+connect();
+</script>
+</body>
+</html>
