@@ -14,12 +14,14 @@
   --text:#1f2c38; --dim:#5f6f7e; --faint:#8a98a5; --accent:#2b7a8a; --onaccent:#fff; --wash:rgba(43,122,138,.12);
   --pc:#3d6f9e; --enemy:#b4483a; --lair:#7a5cb0; --ok:#3c8a5e; --warn:#a5803a; --bad:#b4483a;
   --c-offense:#2b7a8a; --c-control:#7a5cb0; --c-support:#3c8a5e; --c-tank:#a5803a; --c-clutch:#b0567a;
+  --p0:#2b7a8a; --p1:#7a5cb0; --p2:#b07a22; --p3:#3d6f9e; --p4:#b0567a;
 }
 :root[data-theme="night"]{
   --bg:#0b1018; --panel:#131b26; --panel2:#1a2432; --line:#243142; --line2:#33445a;
   --text:#dfe7ef; --dim:#8593a3; --faint:#5f6d7e; --accent:#5fd4b0; --onaccent:#0b1018; --wash:rgba(95,212,176,.14);
   --pc:#a58ae0; --enemy:#e0707a; --lair:#6fb4e8; --ok:#5fd4b0; --warn:#e3c27a; --bad:#e0707a;
   --c-offense:#5fd4b0; --c-control:#a58ae0; --c-support:#6fb4e8; --c-tank:#e3c27a; --c-clutch:#f0a0c0;
+  --p0:#5fd4b0; --p1:#a58ae0; --p2:#e3c27a; --p3:#6fb4e8; --p4:#f0a0c0;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
@@ -44,15 +46,32 @@ input{background:var(--panel);border:1px solid var(--line2);border-radius:10px;p
 .banner{border-radius:14px;padding:12px 14px;margin-bottom:12px;font-family:'Cinzel',serif;font-weight:700;letter-spacing:.06em;text-align:center;font-size:17px}
 .banner.up{background:var(--accent);color:var(--onaccent)}
 .banner.next{background:var(--wash);color:var(--accent);border:1px solid var(--accent)}
-.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
-.grid button{font-size:22px;font-weight:600;padding:14px 0;font-variant-numeric:tabular-nums;border-radius:12px}
+.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.grid button{font-size:16px;font-weight:600;padding:9px 0;font-variant-numeric:tabular-nums;border-radius:8px}
 .grid button.n20{border:2px solid var(--ok);color:var(--ok)} .grid button.n1{border:2px solid var(--bad);color:var(--bad)}
-.grid button:active{transform:scale(.95);background:var(--wash)}
-.under{display:flex;align-items:center;gap:10px;margin-top:10px}
-.under .last{flex:1;color:var(--dim);font-size:15px}
-.mine{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px;text-align:center}
-.mine div{background:var(--panel2);border-radius:10px;padding:6px 2px}
-.mine b{display:block;font-size:20px;font-variant-numeric:tabular-nums} .mine span{font-size:13px;color:var(--dim)}
+.grid button:active{transform:scale(.92);background:var(--wash)}
+.mini{padding:2px 10px;font-size:14px;border-radius:999px;font-family:'Crimson Pro',serif;letter-spacing:0;font-weight:400}
+.mine{display:flex;justify-content:space-between;gap:6px;margin-top:8px;font-size:14px;color:var(--dim)}
+.mine b{color:var(--text);font-variant-numeric:tabular-nums}
+.tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:12px}
+.tabs button{flex:1;border:0;background:transparent;border-radius:999px;padding:7px 0;font-family:'Cinzel',serif;font-weight:700;letter-spacing:.08em;color:var(--dim)}
+.tabs button.on{background:var(--accent);color:var(--onaccent)}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.chips button{padding:3px 11px;font-size:14px;border-radius:999px;color:var(--dim)}
+.chips button.on{background:var(--wash);border-color:var(--accent);color:var(--accent);font-weight:600}
+.chart{width:100%;display:block}
+.chart .grid-l{stroke:var(--line);stroke-width:1}
+.chart .ax{fill:var(--dim);font-size:10px;font-family:'Crimson Pro',serif}
+.chart .ring{fill:none;stroke:var(--line);stroke-width:1}
+.chart .spoke{stroke:var(--line);stroke-width:1}
+.chart .hl{fill:var(--text);font-size:14px;font-family:'Cinzel',serif;font-weight:700;letter-spacing:.03em}
+.chart .gr{fill:var(--accent);font-size:17px}
+.keys{display:flex;gap:12px;flex-wrap:wrap;font-size:14px;color:var(--dim);margin-top:4px}
+.keys i{display:inline-block;width:12px;height:4px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.keys .me{color:var(--text);font-weight:600}
+.keys b{color:var(--text);font-variant-numeric:tabular-nums}
+.small{font-size:13.5px;margin:6px 0 0}
+select{font:inherit;font-size:14px;color:var(--text);background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:2px 6px}
 .order .r{display:flex;align-items:center;gap:10px;padding:7px 10px;border-left:4px solid var(--line2);background:var(--panel2);border-radius:0 9px 9px 0;margin-bottom:4px}
 .order .r.pc{border-left-color:var(--pc)} .order .r.enemy{border-left-color:var(--enemy)} .order .r.lair{border-left-color:var(--lair)}
 .order .r.on{background:var(--wash);border-left-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
@@ -101,6 +120,7 @@ let room = (hashParams().get("room") || store.get("room", "") || "").trim().toLo
 let db = (hashParams().get("db") || store.get("db", "") || "").trim().toLowerCase();
 let me = store.get("pc:" + room, null);
 let roster = [], S = null, es = null, retry = null, fpView = "fight", dmBeat = 0, live = false;
+let tab = store.get("tab", "roll"), scope = "", metric = "dmg", compare = "";
 let queue = store.get("queue:" + room, []);      // taps not yet delivered to the relay
 let mine = store.get("mine:" + room, []);        // this device's recent taps, newest first
 const tree = {};
@@ -242,20 +262,35 @@ function render(){
     if(order[ai].pc === me) banner = '<div class="banner up">You\'re up, ' + esc(meP.short) + "</div>";
     else if(myIdx === (ai + 1) % order.length) banner = '<div class="banner next">You\'re next</div>';
   }
+  let h = '<div class="tabs"><button data-tab="roll" class="' + (tab === "roll" ? "on" : "") + '">Roll</button>' +
+    '<button data-tab="stats" class="' + (tab === "stats" ? "on" : "") + '">Stats</button></div>' + banner;
+  h += tab === "stats" ? statsTab(meP) : rollTab(meP, order);
+  h += '<p style="text-align:center"><button class="ghost" id="notMe">Not ' + esc(meP.short) + "? Switch character</button></p>";
+  app.innerHTML = h;
+  app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; store.set("tab", tab); render(); });
+  app.querySelectorAll("[data-v]").forEach(b => b.onclick = () => roll(+b.dataset.v));
+  app.querySelectorAll("[data-fp]").forEach(b => b.onclick = () => { fpView = b.dataset.fp; render(); });
+  app.querySelectorAll("[data-scope]").forEach(b => b.onclick = () => { scope = b.dataset.scope; render(); });
+  app.querySelectorAll("[data-metric]").forEach(b => b.onclick = () => { metric = b.dataset.metric; render(); });
+  const cmp = $("#cmpSel"); if(cmp) cmp.onchange = () => { compare = cmp.value; render(); };
+  const u = $("#undoBtn"); if(u) u.onclick = undoLast;
+  $("#notMe").onclick = () => { me = null; store.set("pc:" + room, null); render(); };
+}
+
+/* ── Roll tab ── */
+function rollTab(meP, order){
   const st = S && S.rolls && S.rolls[me];
   const last = mine[0];
-  let h = banner +
-    '<div class="panel"><h2>' + esc(meP.short) + "'s d20<span class=\"rt\">tap what the die shows</span></h2>" +
+  let h = '<div class="panel"><h2>' + esc(meP.short) + "'s d20<span class=\"rt\">" +
+      (last ? "last <b>" + last.v + "</b> " + (last.ok ? "✓" : "…") + (queue.length > 1 ? " · " + queue.length + " waiting" : "") : "tap what the die shows") + "</span>" +
+      (last ? '<button class="mini" id="undoBtn">Undo</button>' : "") + "</h2>" +
     '<div class="grid">' + Array.from({ length:20 }, (_, i) => i + 1).map(n =>
       '<button data-v="' + n + '" class="' + (n === 20 ? "n20" : n === 1 ? "n1" : "") + '">' + n + "</button>").join("") + "</div>" +
-    '<div class="under"><span class="last">' + (last ? "Last: <b>" + last.v + "</b> " + (last.ok ? "✓ sent" : "· sending…") : "Nothing rolled yet") +
-      (queue.length > 1 ? " · " + queue.length + " waiting" : "") + "</span>" +
-      (last ? '<button id="undoBtn">Undo</button>' : "") + "</div>" +
-    (st ? '<div class="mine"><div><b>' + st.d20 + "</b><span>d20s</span></div><div><b>" + st.n20 + "</b><span>nat 20s</span></div><div><b>" + st.n1 +
-      "</b><span>nat 1s</span></div><div><b>" + (st.avg == null ? "—" : st.avg) + "</b><span>average</span></div></div>" : "") + "</div>";
+    (st ? '<div class="mine"><span><b>' + st.d20 + "</b> d20s</span><span><b>" + st.n20 + "</b> nat 20</span><span><b>" + st.n1 +
+      "</b> nat 1</span><span>avg <b>" + (st.avg == null ? "—" : st.avg) + "</b></span></div>" : "") + "</div>";
 
   h += '<div class="panel order"><h2>Turn order<span class="rt">' + (S && S.running ? "Round " + S.round : "no fight running") + "</span></h2>" +
-    (order.length ? order.map((r, i) => '<div class="r ' + r.type + (r.on ? " on" : "") + (r.pc === me ? " me" : "") + '"><span class="i">' + (r.init ?? "—") + '</span><span class="n">' +
+    (order.length ? order.map(r => '<div class="r ' + r.type + (r.on ? " on" : "") + (r.pc === me ? " me" : "") + '"><span class="i">' + (r.init ?? "—") + '</span><span class="n">' +
       esc(r.n) + (r.conds && r.conds.length ? ' <span class="c">' + esc(r.conds.join(", ")) + "</span>" : "") + "</span>" +
       (r.bl ? '<span class="tag">bloodied</span>' : r.down ? '<span class="tag">down</span>' : "") + "</div>").join("")
       : '<p class="muted" style="margin:0">The order shows up here when the DM starts a fight.</p>') + "</div>";
@@ -277,18 +312,129 @@ function render(){
         return '<div class="row"><div><div class="nm"><span style="' + (p.id === me ? "font-weight:600" : "") + '">' + esc(p.short || p.name) + "</span>" +
           (o && o.role && o.role !== "—" ? '<span class="role">' + esc(o.role) + "</span>" : "") + "</div>" + bar + '</div><span class="t">' + total + "</span></div>";
       }).join("") +
-      (S.recent && S.recent.length ? '<h2 style="margin-top:10px">Latest</h2><div class="recent">' + S.recent.map(r => {
+      (S.recent && S.recent.length ? '<h2 style="margin-top:10px">Latest</h2><div class="recent">' + S.recent.slice(0, 6).map(r => {
         const n = roster.find(p => p.id === r.pc);
         return '<div><span class="p">' + esc(n ? n.short || n.name : "") + '</span><span class="x">' + esc(r.text) + '</span><span class="v ' + (r.pts < 0 ? "neg" : r.pts > 0 ? "pos" : "") + '">' +
           (r.pts > 0 ? "+" : "") + r.pts + "</span></div>";
       }).join("") + "</div>" : "") + "</div>";
   }
-  h += '<p style="text-align:center"><button class="ghost" id="notMe">Not ' + esc(meP.short) + "? Switch character</button></p>";
-  app.innerHTML = h;
-  app.querySelectorAll("[data-v]").forEach(b => b.onclick = () => roll(+b.dataset.v));
-  app.querySelectorAll("[data-fp]").forEach(b => b.onclick = () => { fpView = b.dataset.fp; render(); });
-  const u = $("#undoBtn"); if(u) u.onclick = undoLast;
-  $("#notMe").onclick = () => { me = null; store.set("pc:" + room, null); render(); };
+  return h;
+}
+
+/* ── Stats tab ── */
+const METRICS = { dmg:"Damage", heal:"Healing", took:"Tanking" };
+const AXES = [
+  ["power", "Power"], ["control", "Control"], ["support", "Support"],
+  ["durability", "Durability"], ["precision", "Precision"], ["clutch", "Clutch"]
+];
+const pcColor = id => "var(--p" + Math.max(0, roster.findIndex(p => p.id === id)) % 5 + ")";
+const shortOf = id => { const p = roster.find(x => x.id === id); return p ? p.short || p.name : "?"; };
+function fightsList(){
+  return Object.values(tree.stats || {}).filter(Boolean).sort((a, b) => b.order - a.order);
+}
+function niceMax(v){
+  if(v <= 0) return 10;
+  const m = Math.pow(10, Math.floor(Math.log10(v))), f = v / m;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * m;
+}
+/* cumulative lines, one per party member; x is rounds (one fight) or fights (whole act) */
+function lineChart(series, labels){
+  const W = 320, H = 170, L = 38, R = 10, T = 10, B = 22;
+  const ids = roster.map(p => p.id).filter(id => series[id]);
+  const cum = {};
+  ids.forEach(id => { let t = 0; cum[id] = [0].concat(series[id].map(v => t += v)); });
+  const n = labels.length;
+  const top = niceMax(Math.max(1, ...ids.map(id => cum[id][cum[id].length - 1] || 0)));
+  const x = i => L + (W - L - R) * (n ? i / n : 0), y = v => T + (H - T - B) * (1 - v / top);
+  let g = "";
+  [0, .5, 1].forEach(f => { const yy = y(top * f);
+    g += '<line x1="' + L + '" y1="' + yy + '" x2="' + (W - R) + '" y2="' + yy + '" class="grid-l"/><text x="' + (L - 5) + '" y="' + (yy + 3) + '" text-anchor="end" class="ax">' + Math.round(top * f) + "</text>"; });
+  const step = Math.max(1, Math.ceil(n / 7));
+  labels.forEach((lb, i) => { if(i % step === 0 || i === n - 1) g += '<text x="' + x(i + 1) + '" y="' + (H - 6) + '" text-anchor="middle" class="ax">' + esc(lb) + "</text>"; });
+  [...ids].sort((a, b) => (a === me) - (b === me)).forEach(id => {
+    g += '<polyline fill="none" style="stroke:' + pcColor(id) + '" stroke-width="' + (id === me ? 3 : 1.8) + '" stroke-linejoin="round" stroke-linecap="round" points="' +
+      cum[id].map((v, i) => x(i).toFixed(1) + "," + y(v).toFixed(1)).join(" ") + '"/>';
+    const lv = cum[id][cum[id].length - 1];
+    g += '<circle cx="' + x(n).toFixed(1) + '" cy="' + y(lv).toFixed(1) + '" r="' + (id === me ? 3.5 : 2.5) + '" style="fill:' + pcColor(id) + '"/>';
+  });
+  return '<svg viewBox="0 0 ' + W + " " + H + '" class="chart" role="img" aria-label="Running total by ' + (labels[0] && labels[0][0] === "R" ? "round" : "fight") + '">' + g + "</svg>";
+}
+function grade(r){ return r >= .8 ? "A" : r >= .6 ? "B" : r >= .4 ? "C" : r >= .2 ? "D" : "E"; }
+/* the six axes for every party member, as 0–1 values against the party's best (precision is a rate) */
+function hexValues(list){
+  const sum = {};
+  roster.forEach(p => sum[p.id] = { power:0, control:0, support:0, durability:0, clutch:0, turns:0, whiffs:0, landed:0, resisted:0 });
+  list.forEach(f => roster.forEach(p => { const h = f.hex && f.hex[p.id]; if(h) Object.keys(sum[p.id]).forEach(k => sum[p.id][k] += +h[k] || 0); }));
+  const out = {};
+  roster.forEach(p => { const s = sum[p.id];
+    const tries = s.turns + s.landed + s.resisted;
+    out[p.id] = { precision: tries ? Math.max(0, Math.min(1, (s.turns - s.whiffs + s.landed) / tries)) : null }; });
+  ["power","control","support","durability","clutch"].forEach(k => {
+    const best = Math.max(0, ...roster.map(p => sum[p.id][k]));
+    roster.forEach(p => out[p.id][k] = best > 0 ? sum[p.id][k] / best : 0);
+  });
+  return out;
+}
+function hexChart(vals, ids){
+  const C = 150, Rr = 92, pt = (i, r) => {
+    const a = -Math.PI / 2 + i * Math.PI / 3;
+    return [(C + Math.cos(a) * Rr * r).toFixed(1), (C - 8 + Math.sin(a) * Rr * r).toFixed(1)];
+  };
+  let g = "";
+  [.2, .4, .6, .8, 1].forEach(r => g += '<polygon class="ring" points="' + AXES.map((_, i) => pt(i, r).join(",")).join(" ") + '"/>');
+  AXES.forEach((_, i) => { const [x2, y2] = pt(i, 1); g += '<line class="spoke" x1="' + C + '" y1="' + (C - 8) + '" x2="' + x2 + '" y2="' + y2 + '"/>'; });
+  [...ids].reverse().forEach((id, k) => {
+    const v = vals[id]; if(!v) return;
+    const isMe = id === me;
+    g += '<polygon points="' + AXES.map(([key], i) => pt(i, Math.max(.04, v[key] ?? 0)).join(",")).join(" ") + '" style="stroke:' + pcColor(id) +
+      ';fill:' + pcColor(id) + ';fill-opacity:' + (isMe ? .28 : .06) + '" stroke-width="' + (isMe ? 2.5 : 1.6) + '"' + (isMe ? "" : ' stroke-dasharray="4 3"') + "/>";
+  });
+  const mv = vals[me] || {};
+  AXES.forEach(([key, label], i) => {
+    const [lx, ly] = pt(i, 1.2);
+    const anchor = i === 0 || i === 3 ? "middle" : i < 3 ? "start" : "end";
+    const gr = mv[key] == null ? "–" : grade(mv[key]);
+    g += '<text x="' + lx + '" y="' + (+ly + 4) + '" text-anchor="' + anchor + '" class="hl">' + label + ' <tspan class="gr">' + gr + "</tspan></text>";
+  });
+  return '<svg viewBox="-62 -6 424 300" class="chart hex" role="img" aria-label="Contribution hexagram">' + g + "</svg>";
+}
+function statsTab(meP){
+  const list = fightsList();
+  if(!list.length) return '<div class="panel"><h2>Stats</h2><p class="muted" style="margin:0">Fights from this act show up here once the DM runs one.</p></div>';
+  if(scope !== "act" && !list.some(f => f.id === scope)) scope = list[0].id;
+  const chosen = scope === "act" ? list.slice().reverse() : list.filter(f => f.id === scope);
+  let h = '<div class="chips">' + list.map(f => '<button data-scope="' + esc(f.id) + '" class="' + (scope === f.id ? "on" : "") + '">' + esc(f.name) + (f.live ? " ●" : "") + "</button>").join("") +
+    '<button data-scope="act" class="' + (scope === "act" ? "on" : "") + '">Whole act</button></div>';
+
+  /* running totals */
+  let series = {}, labels = [];
+  if(scope === "act"){
+    roster.forEach(p => series[p.id] = chosen.map(f => (f.totals[p.id] || {})[metric] || 0));
+    labels = chosen.map((f, i) => "F" + (i + 1));
+  }else{
+    const f = chosen[0];
+    if(f.hasRounds){ roster.forEach(p => series[p.id] = (f.series[metric] || {})[p.id] || []); labels = Array.from({ length:f.rounds }, (_, i) => "R" + (i + 1)); }
+  }
+  const totals = {};
+  roster.forEach(p => totals[p.id] = chosen.reduce((t, f) => t + ((f.totals[p.id] || {})[metric] || 0), 0));
+  h += '<div class="panel"><div class="seg">' + Object.entries(METRICS).map(([k, l]) => '<button data-metric="' + k + '" class="' + (metric === k ? "on" : "") + '">' + l + "</button>").join("") + "</div>" +
+    (labels.length ? lineChart(series, labels) : '<p class="muted">This fight came from the old tracker, so there\'s no round-by-round data. Totals:</p>') +
+    '<div class="keys">' + roster.map(p => ({ p, t:totals[p.id] })).sort((a, b) => b.t - a.t).map(({ p, t }) =>
+      '<span class="' + (p.id === me ? "me" : "") + '"><i style="background:' + pcColor(p.id) + '"></i>' + esc(p.short || p.name) + " <b>" + t + "</b></span>").join("") + "</div>" +
+    (scope === "act" ? '<p class="muted small">F1, F2… are this act\'s fights in order.</p>' : "") + "</div>";
+
+  /* hexagram */
+  const vals = hexValues(chosen);
+  const others = roster.filter(p => p.id !== me);
+  const ids = compare === "all" ? roster.map(p => p.id) : [me].concat(others.some(p => p.id === compare) ? [compare] : []);
+  h += '<div class="panel"><h2>' + esc(meP.short) + "'s stand<span class=\"rt\">" +
+    '<select id="cmpSel"><option value="">compare…</option>' + others.map(p => '<option value="' + esc(p.id) + '"' + (compare === p.id ? " selected" : "") + ">" + esc(p.short || p.name) + "</option>").join("") +
+    '<option value="all"' + (compare === "all" ? " selected" : "") + ">everyone</option></select></span></h2>" +
+    hexChart(vals, ids) +
+    '<div class="keys">' + ids.map(id => '<span class="' + (id === me ? "me" : "") + '"><i style="background:' + pcColor(id) + '"></i>' + esc(shortOf(id)) + "</span>").join("") + "</div>" +
+    '<p class="muted small">Grades are against the party\'s best in ' + (scope === "act" ? "the act" : "this fight") +
+      ": A is the top. Precision is the share of turns and spells that landed.</p></div>";
+  return h;
 }
 window.addEventListener("hashchange", () => { const h = location.hash; if(/room=/.test(h) && /db=/.test(h)) useLink(h); });
 document.addEventListener("visibilitychange", () => { if(!document.hidden && !live) connect(); });
